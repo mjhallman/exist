@@ -87,7 +87,6 @@ import org.exist.security.Permission;
 import org.exist.security.SecurityManager;
 import org.exist.security.internal.aider.UserAider;
 import org.exist.storage.ElementIndex;
-import org.exist.storage.TextSearchEngine;
 import org.exist.util.CollectionScanner;
 import org.exist.util.ConfigurationHelper;
 import org.exist.util.DirectoryScanner;
@@ -1043,25 +1042,6 @@ public class InteractiveClient {
                 }
                 return true;
                 
-            } else if (args[0].equalsIgnoreCase("terms")) {
-                if (args.length < 3) {
-                    System.out
-                            .println("Usage: terms [xpath] sequence-start sequence-end");
-                    return true;
-                }
-                final IndexQueryService service = (IndexQueryService) current
-                        .getService("IndexQueryService", "1.0");
-                Occurrences[] terms;
-                if (args.length == 3) {
-                    terms = service.scanIndexTerms(args[1], args[2], true);
-                } else {
-                    terms = service.scanIndexTerms(args[1], args[2], args[3]);
-                }
-                System.out.println("Element occurrences in collection " + current.getName());
-                System.out.println("-------------------------------------------------------");
-                for (int i = 0; i < terms.length; i++) {
-                    System.out.println(formatString(terms[i].getTerm().toString(), Integer.toString(terms[i].getOccurrences()), 50));
-                }
             } else if (args[0].equalsIgnoreCase("xupdate")) {
                 if (startGUI) {
                     messageln("command not supported in GUI mode.");
@@ -2783,8 +2763,6 @@ public class InteractiveClient {
             
             if (o instanceof ElementIndex) {
                 elementsProgress.set(ind.getValue(), ind.getMax());
-            } else if (o instanceof TextSearchEngine) {
-                wordsProgress.set(ind.getValue(), ind.getMax());
             } else {
                 parseProgress.set(ind.getValue(), ind.getMax());
             }

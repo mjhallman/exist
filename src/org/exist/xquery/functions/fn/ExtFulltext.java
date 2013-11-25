@@ -22,7 +22,6 @@
 package org.exist.xquery.functions.fn;
 
 import org.exist.EXistException;
-import org.exist.fulltext.FTIndex;
 import org.exist.collections.Collection;
 import org.exist.dom.DocumentSet;
 import org.exist.dom.ExtArrayNodeSet;
@@ -30,8 +29,6 @@ import org.exist.dom.NodeSet;
 import org.exist.dom.QName;
 import org.exist.storage.DBBroker;
 import org.exist.storage.ElementValue;
-import org.exist.storage.FulltextIndexSpec;
-import org.exist.storage.analysis.Tokenizer;
 import org.exist.xmldb.XmldbURI;
 import org.exist.xquery.*;
 import org.exist.xquery.util.ExpressionDumper;
@@ -53,6 +50,7 @@ import java.util.List;
  * 
  * @author wolf
  */
+@Deprecated //XXX: right?
 public class ExtFulltext extends Function implements Optimizable {
 
     public final static FunctionSignature signature =
@@ -145,7 +143,7 @@ public class ExtFulltext extends Function implements Optimizable {
     public boolean canOptimize(Sequence contextSequence) {
         if (contextQName == null)
             {return false;}
-        return checkForQNameIndex(contextSequence);
+        return false;//checkForQNameIndex(contextSequence);
     }
 
     public boolean optimizeOnSelf() {
@@ -162,134 +160,137 @@ public class ExtFulltext extends Function implements Optimizable {
     
     public NodeSet preSelect(Sequence contextSequence, boolean useContext) throws XPathException {
         //The expression can be called multiple times, so we need to clear the previous preselectResult
-        preselectResult = null;
-        final long start = System.currentTimeMillis();
-        //Get the search terms
-        final String arg = searchTerm.eval(contextSequence).getStringValue();
-        String[] terms;
-        try {
-            terms = getSearchTerms(arg);
-        } catch (final EXistException e) {
-            throw new XPathException(e.getMessage());
-        }
-        //Lookup the terms in the full-text index. returns one node set for each term
-        final NodeSet[] hits = getMatches(contextSequence.getDocumentSet(),
-                useContext ? contextSequence.toNodeSet() : null,
-                NodeSet.DESCENDANT, contextQName, terms);
-        //Walk through the matches and compute the combined node set
-        if (hits.length > 0)
-        	{preselectResult = hits[0];}
-        if (preselectResult != null) {
-            for(int k = 1; k < hits.length; k++) {
-                if(hits[k] != null) {
-                    preselectResult = (type == Constants.FULLTEXT_AND ?
-                        preselectResult.deepIntersection(hits[k]) :
-                        preselectResult.union(hits[k]));
-                }
-            }
-        } else {
+//        preselectResult = null;
+//        final long start = System.currentTimeMillis();
+//        //Get the search terms
+//        final String arg = searchTerm.eval(contextSequence).getStringValue();
+//        String[] terms;
+//        try {
+//            terms = getSearchTerms(arg);
+//        } catch (final EXistException e) {
+//            throw new XPathException(e.getMessage());
+//        }
+//        //Lookup the terms in the full-text index. returns one node set for each term
+//        final NodeSet[] hits = getMatches(contextSequence.getDocumentSet(),
+//                useContext ? contextSequence.toNodeSet() : null,
+//                NodeSet.DESCENDANT, contextQName, terms);
+//        //Walk through the matches and compute the combined node set
+//        if (hits.length > 0)
+//        	{preselectResult = hits[0];}
+//        if (preselectResult != null) {
+//            for(int k = 1; k < hits.length; k++) {
+//                if(hits[k] != null) {
+//                    preselectResult = (type == Constants.FULLTEXT_AND ?
+//                        preselectResult.deepIntersection(hits[k]) :
+//                        preselectResult.union(hits[k]));
+//                }
+//            }
+//        } else {
             preselectResult = NodeSet.EMPTY_SET;
-        }
-        if (context.getProfiler().traceFunctions())
-            {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
-                PerformanceStats.OPTIMIZED_INDEX, System.currentTimeMillis() - start);}
+//        }
+//        if (context.getProfiler().traceFunctions())
+//            {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
+//                PerformanceStats.OPTIMIZED_INDEX, System.currentTimeMillis() - start);}
         return preselectResult;
     }
 
     public Sequence eval(Sequence contextSequence, Item contextItem) throws XPathException {
-        //If we were optimizing and the preselect did not return anything,
-        //we won't have any matches and can return
-        if (preselectResult != null && preselectResult.isEmpty())
-            {return Sequence.EMPTY_SEQUENCE;}
-        final long start = System.currentTimeMillis();
-        if (contextItem != null)
-            {contextSequence = contextItem.toSequence();}
-        if (preselectResult == null && !checkForQNameIndex(contextSequence))
-            {contextQName = null;}
-        NodeSet result;
-        //If the expression does not depend on the current context item,
-        //we can evaluate it in one single step
-        if (path == null || !Dependency.dependsOn(path, Dependency.CONTEXT_ITEM)) {
-            final boolean canCache = 
-                !Dependency.dependsOn(searchTerm, Dependency.CONTEXT_ITEM) &&
-                !Dependency.dependsOnVar(searchTerm);
-            if (canCache && cached != null && cached.isValid(contextSequence, contextItem)) {
-                return cached.getResult();
-            }
-            //Do we optimize this expression?
-            if (contextStep == null || preselectResult == null) {
-                //No optimization: process the whole expression
-                final NodeSet nodes = path == null ?
-                    contextSequence.toNodeSet() : path.eval(contextSequence).toNodeSet();
-                final String arg = searchTerm.eval(contextSequence).getStringValue();
-                result = evalQuery(arg, nodes).toNodeSet();
-                if (context.getProfiler().traceFunctions())
-                    {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
-                        PerformanceStats.BASIC_INDEX, System.currentTimeMillis() - start);}
-            } else {
-                contextStep.setPreloadedData(contextSequence.getDocumentSet(), preselectResult);
-                result = path.eval(contextSequence).toNodeSet();
-            }
-            if(canCache && contextSequence != null && contextSequence.isCacheable())
-                {cached = new CachedResult(contextSequence, contextItem, result);}
-        //Otherwise we have to walk through each item in the context
-        } else {
-            Item current;
-            String arg;
-            NodeSet nodes;
-            result = new ExtArrayNodeSet();
-            Sequence temp;
-            for (final SequenceIterator i = contextSequence.iterate(); i.hasNext();) {
-                current = i.nextItem();
-                arg = searchTerm.eval(current.toSequence()).getStringValue();
-                nodes = path == null ? contextSequence.toNodeSet() :
-                    path.eval(current.toSequence()).toNodeSet();
-                temp = evalQuery(arg, nodes);
-                result.addAll(temp);
-            }
-            if (context.getProfiler().traceFunctions())
-                {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
-                    PerformanceStats.BASIC_INDEX, System.currentTimeMillis() - start);}
-        }
-        preselectResult = null;
-        return result;
+        
+        throw new XPathException(this, "deprecated, because old FT removed");
+        
+//        //If we were optimizing and the preselect did not return anything,
+//        //we won't have any matches and can return
+//        if (preselectResult != null && preselectResult.isEmpty())
+//            {return Sequence.EMPTY_SEQUENCE;}
+//        final long start = System.currentTimeMillis();
+//        if (contextItem != null)
+//            {contextSequence = contextItem.toSequence();}
+//        if (preselectResult == null && !checkForQNameIndex(contextSequence))
+//            {contextQName = null;}
+//        NodeSet result;
+//        //If the expression does not depend on the current context item,
+//        //we can evaluate it in one single step
+//        if (path == null || !Dependency.dependsOn(path, Dependency.CONTEXT_ITEM)) {
+//            final boolean canCache = 
+//                !Dependency.dependsOn(searchTerm, Dependency.CONTEXT_ITEM) &&
+//                !Dependency.dependsOnVar(searchTerm);
+//            if (canCache && cached != null && cached.isValid(contextSequence, contextItem)) {
+//                return cached.getResult();
+//            }
+//            //Do we optimize this expression?
+//            if (contextStep == null || preselectResult == null) {
+//                //No optimization: process the whole expression
+//                final NodeSet nodes = path == null ?
+//                    contextSequence.toNodeSet() : path.eval(contextSequence).toNodeSet();
+//                final String arg = searchTerm.eval(contextSequence).getStringValue();
+//                result = evalQuery(arg, nodes).toNodeSet();
+//                if (context.getProfiler().traceFunctions())
+//                    {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
+//                        PerformanceStats.BASIC_INDEX, System.currentTimeMillis() - start);}
+//            } else {
+//                contextStep.setPreloadedData(contextSequence.getDocumentSet(), preselectResult);
+//                result = path.eval(contextSequence).toNodeSet();
+//            }
+//            if(canCache && contextSequence != null && contextSequence.isCacheable())
+//                {cached = new CachedResult(contextSequence, contextItem, result);}
+//        //Otherwise we have to walk through each item in the context
+//        } else {
+//            Item current;
+//            String arg;
+//            NodeSet nodes;
+//            result = new ExtArrayNodeSet();
+//            Sequence temp;
+//            for (final SequenceIterator i = contextSequence.iterate(); i.hasNext();) {
+//                current = i.nextItem();
+//                arg = searchTerm.eval(current.toSequence()).getStringValue();
+//                nodes = path == null ? contextSequence.toNodeSet() :
+//                    path.eval(current.toSequence()).toNodeSet();
+//                temp = evalQuery(arg, nodes);
+//                result.addAll(temp);
+//            }
+//            if (context.getProfiler().traceFunctions())
+//                {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
+//                    PerformanceStats.BASIC_INDEX, System.currentTimeMillis() - start);}
+//        }
+//        preselectResult = null;
+//        return result;
     }
 
-    private boolean checkForQNameIndex(Sequence contextSequence) {
-        if (contextSequence == null || contextQName == null)
-            {return false;}
-        boolean hasQNameIndex = true;
-        for (final Iterator<Collection> i = contextSequence.getCollectionIterator(); i.hasNext(); ) {
-            final Collection collection = i.next();
-            if (collection.getURI().startsWith(XmldbURI.SYSTEM_COLLECTION_URI))
-                {continue;}
-            final FulltextIndexSpec config = collection.getFulltextIndexConfiguration(context.getBroker());
-            //We have a full-text index
-            if (config != null) {
-                hasQNameIndex = config.hasQNameIndex(contextQName);
-            }
-            if (!hasQNameIndex) {
-                if (LOG.isTraceEnabled())
-                    {LOG.trace("Cannot use index on QName: " + contextQName +
-                            ". Collection " + collection.getURI() + " does not define an index");}
-                break;
-            }
-        }
-        return hasQNameIndex;
-    }
+//    private boolean checkForQNameIndex(Sequence contextSequence) {
+//        if (contextSequence == null || contextQName == null)
+//            {return false;}
+//        boolean hasQNameIndex = true;
+//        for (final Iterator<Collection> i = contextSequence.getCollectionIterator(); i.hasNext(); ) {
+//            final Collection collection = i.next();
+//            if (collection.getURI().startsWith(XmldbURI.SYSTEM_COLLECTION_URI))
+//                {continue;}
+//            final FulltextIndexSpec config = collection.getFulltextIndexConfiguration(context.getBroker());
+//            //We have a full-text index
+//            if (config != null) {
+//                hasQNameIndex = config.hasQNameIndex(contextQName);
+//            }
+//            if (!hasQNameIndex) {
+//                if (LOG.isTraceEnabled())
+//                    {LOG.trace("Cannot use index on QName: " + contextQName +
+//                            ". Collection " + collection.getURI() + " does not define an index");}
+//                break;
+//            }
+//        }
+//        return hasQNameIndex;
+//    }
 
-    protected Sequence evalQuery(String searchArg, NodeSet nodes) throws XPathException {
-        String[] terms;
-        try {
-            terms = getSearchTerms(searchArg);
-        } catch (final EXistException e) {
-            throw new XPathException(e.getMessage());
-        }
-        final NodeSet hits = processQuery(terms, nodes);
-        if (hits == null)
-            {return NodeSet.EMPTY_SET;}
-        return hits;
-    }
+//    protected Sequence evalQuery(String searchArg, NodeSet nodes) throws XPathException {
+//        String[] terms;
+//        try {
+//            terms = getSearchTerms(searchArg);
+//        } catch (final EXistException e) {
+//            throw new XPathException(e.getMessage());
+//        }
+//        final NodeSet hits = processQuery(terms, nodes);
+//        if (hits == null)
+//            {return NodeSet.EMPTY_SET;}
+//        return hits;
+//    }
 
     public String toString() {
         final StringBuilder result = new StringBuilder();
@@ -321,52 +322,52 @@ public class ExtFulltext extends Function implements Optimizable {
         return path.getDependencies();
     }
 
-    protected String[] getSearchTerms(String searchString) throws EXistException {
-        final List<String> tokens = new ArrayList<String>();
-        final Tokenizer tokenizer = context.getBroker().getTextEngine().getTokenizer();
-        tokenizer.setText(searchString);
-        org.exist.storage.analysis.TextToken token;
-        String word;
-        while (null != (token = tokenizer.nextToken(true))) {
-            word = token.getText();
-            tokens.add(word);
-        }
-        final String[] terms = new String[tokens.size()];
-        return tokens.toArray(terms);
-    }
-
-    protected NodeSet processQuery(String[] terms, NodeSet contextSet)
-        throws XPathException {
-        if (terms == null) {
-            throw new RuntimeException("No search terms");
-        }
-        if (terms.length == 0)
-            {return NodeSet.EMPTY_SET;}
-        final NodeSet[] hits = getMatches(contextSet.getDocumentSet(), contextSet,
-            NodeSet.ANCESTOR, contextQName, terms);
-        NodeSet result = hits[0];
-        if (result != null) {
-            for(int k = 1; k < hits.length; k++) {
-                if (hits[k] != null) {
-                    result = type == Constants.FULLTEXT_AND ? 
-                        result.deepIntersection(hits[k]) : result.union(hits[k]);
-                }
-            }
-            return result;
-        } else {
-            return NodeSet.EMPTY_SET;
-        }
-    }
-
-    protected NodeSet[] getMatches(DocumentSet docs, NodeSet contextSet,
-            int axis, QName qname, String[] terms) throws XPathException {
-        final NodeSet hits[] = new NodeSet[terms.length];
-        for (int k = 0; k < terms.length; k++) {
-            hits[k] = context.getBroker().getTextEngine().getNodesContaining(
-                context, docs, contextSet, axis, qname, terms[k], DBBroker.MATCH_EXACT);
-        }
-        return hits;
-    }
+//    protected String[] getSearchTerms(String searchString) throws EXistException {
+//        final List<String> tokens = new ArrayList<String>();
+//        final Tokenizer tokenizer = context.getBroker().getTextEngine().getTokenizer();
+//        tokenizer.setText(searchString);
+//        org.exist.storage.analysis.TextToken token;
+//        String word;
+//        while (null != (token = tokenizer.nextToken(true))) {
+//            word = token.getText();
+//            tokens.add(word);
+//        }
+//        final String[] terms = new String[tokens.size()];
+//        return tokens.toArray(terms);
+//    }
+//
+//    protected NodeSet processQuery(String[] terms, NodeSet contextSet)
+//        throws XPathException {
+//        if (terms == null) {
+//            throw new RuntimeException("No search terms");
+//        }
+//        if (terms.length == 0)
+//            {return NodeSet.EMPTY_SET;}
+//        final NodeSet[] hits = getMatches(contextSet.getDocumentSet(), contextSet,
+//            NodeSet.ANCESTOR, contextQName, terms);
+//        NodeSet result = hits[0];
+//        if (result != null) {
+//            for(int k = 1; k < hits.length; k++) {
+//                if (hits[k] != null) {
+//                    result = type == Constants.FULLTEXT_AND ? 
+//                        result.deepIntersection(hits[k]) : result.union(hits[k]);
+//                }
+//            }
+//            return result;
+//        } else {
+//            return NodeSet.EMPTY_SET;
+//        }
+//    }
+//
+//    protected NodeSet[] getMatches(DocumentSet docs, NodeSet contextSet,
+//            int axis, QName qname, String[] terms) throws XPathException {
+//        final NodeSet hits[] = new NodeSet[terms.length];
+//        for (int k = 0; k < terms.length; k++) {
+//            hits[k] = context.getBroker().getTextEngine().getNodesContaining(
+//                context, docs, contextSet, axis, qname, terms[k], DBBroker.MATCH_EXACT);
+//        }
+//        return hits;
+//    }
 
     public int returnsType() {
         return Type.NODE;

@@ -106,60 +106,6 @@ public class RemoteIndexQueryService implements IndexQueryService {
     }
 
 	/* (non-Javadoc)
-	 * @see org.exist.xmldb.IndexQueryService#scanIndexTerms(java.lang.String, java.lang.String, boolean)
-	 */
-	public Occurrences[] scanIndexTerms(String start, String end, boolean inclusive)
-		throws XMLDBException {
-		try {
-            final List<Object> params = new ArrayList<Object>(1);
-			params.add(parent.getPath());
-			params.add(start);
-			params.add(end);
-			params.add(Boolean.valueOf(inclusive));
-			final Object[] result = (Object[]) rpcClient.execute("scanIndexTerms", params);
-			final Occurrences occurrences[] = new Occurrences[result.length];
-			Object[] row;
-			for (int i = 0; i < occurrences.length; i++) {
-				row = (Object[]) result[i];
-				occurrences[i] = new Occurrences((String) row[0]);
-				occurrences[i].addOccurrences(((Integer) row[1]).intValue());
-			}
-			return occurrences;
-		} catch (final XmlRpcException e) {
-			throw new XMLDBException(
-				ErrorCodes.UNKNOWN_ERROR,
-				"xmlrpc error while retrieving indexed elements",
-				e);
-		}
-    }
-
-	/* (non-Javadoc)
-	 * @see org.exist.xmldb.IndexQueryService#scanIndexTerms(java.lang.String, java.lang.String, java.lang.String)
-	 */
-	public Occurrences[] scanIndexTerms(String xpath, String start, String end) throws XMLDBException {
-		try {
-            final List<Object> params = new ArrayList<Object>(1);
-			params.add(xpath);
-			params.add(start);
-			params.add(end);
-			final Object[] result = (Object[]) rpcClient.execute("scanIndexTerms", params);
-			final Occurrences occurrences[] = new Occurrences[result.length];
-			Object[] row;
-			for (int i = 0; i < occurrences.length; i++) {
-				row = (Object[]) result[i];
-				occurrences[i] = new Occurrences((String) row[0]);
-				occurrences[i].addOccurrences(((Integer) row[1]).intValue());
-			}
-			return occurrences;
-		} catch (final XmlRpcException e) {
-			throw new XMLDBException(
-				ErrorCodes.UNKNOWN_ERROR,
-				"xmlrpc error while retrieving indexed elements",
-				e);
-		}
-    }
-	
-	/* (non-Javadoc)
 	 * @see org.xmldb.api.base.Service#getName()
 	 */
 	public String getName() throws XMLDBException {

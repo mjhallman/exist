@@ -40,8 +40,6 @@ public class SystemModule extends AbstractInternalModule {
     public final static String RELEASED_IN_VERSION = "eXist-1.0";
 
     public static final FunctionDef[] functions = {
-            new FunctionDef(FtIndexLookup.signature, FtIndexLookup.class),
-
             new FunctionDef(FnExport.signatures[0], FnExport.class),
             new FunctionDef(FnExport.signatures[1], FnExport.class),
             new FunctionDef(FnImport.signatures[0], FnImport.class),

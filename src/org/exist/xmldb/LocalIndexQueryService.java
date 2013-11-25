@@ -24,8 +24,6 @@ package org.exist.xmldb;
 import org.exist.EXistException;
 import org.exist.collections.CollectionConfigurationException;
 import org.exist.collections.CollectionConfigurationManager;
-import org.exist.dom.DefaultDocumentSet;
-import org.exist.dom.MutableDocumentSet;
 import org.exist.security.PermissionDeniedException;
 import org.exist.security.Subject;
 import org.exist.storage.BrokerPool;
@@ -34,9 +32,6 @@ import org.exist.storage.sync.Sync;
 import org.exist.storage.txn.TransactionManager;
 import org.exist.storage.txn.Txn;
 import org.exist.util.Occurrences;
-import org.exist.xquery.XPathException;
-import org.exist.xquery.XQuery;
-import org.exist.xquery.value.Sequence;
 import org.xmldb.api.base.Collection;
 import org.xmldb.api.base.ErrorCodes;
 import org.xmldb.api.base.XMLDBException;
@@ -201,64 +196,5 @@ public class LocalIndexQueryService implements IndexQueryService {
 	 * @see org.xmldb.api.base.Configurable#setProperty(java.lang.String, java.lang.String)
 	 */
 	public void setProperty(String name, String value) throws XMLDBException {
-	}
-
-	/* (non-Javadoc)
-	 * @see org.exist.xmldb.IndexQueryService#scanIndexTerms(java.lang.String, java.lang.String, boolean)
-	 */
-	public Occurrences[] scanIndexTerms(
-		String start,
-		String end,
-		boolean inclusive)
-		throws XMLDBException {
-    	final Subject preserveSubject = pool.getSubject();
-		DBBroker broker = null;
-		try {
-			broker = pool.get(user);
-			final MutableDocumentSet docs = new DefaultDocumentSet();
-			parent.getCollection().allDocs(broker, docs, inclusive);
-			return broker.getTextEngine().scanIndexTerms(docs, docs.docsToNodeSet(),  start, end);
-		} catch (final PermissionDeniedException e) {
-			throw new XMLDBException(ErrorCodes.PERMISSION_DENIED,
-				"permission denied", e);
-		} catch (final EXistException e) {
-			throw new XMLDBException(
-				ErrorCodes.VENDOR_ERROR,
-				"database access error",
-				e);
-		} finally {
-			pool.release(broker);
-			pool.setSubject(preserveSubject);
-		}
-	}
-	
-	public Occurrences[] scanIndexTerms(
-			String xpath,
-			String start,
-			String end)
-			throws XMLDBException {
-    	final Subject preserveSubject = pool.getSubject();
-		DBBroker broker = null;
-		try {
-			broker = pool.get(user);
-			final XQuery xquery = broker.getXQueryService();
-			final Sequence nodes = xquery.execute(xpath, null, parent.getAccessContext());
-			return broker.getTextEngine().scanIndexTerms(nodes.getDocumentSet(), 
-					nodes.toNodeSet(),  start, end);
-		} catch (final EXistException e) {
-			throw new XMLDBException(
-					ErrorCodes.VENDOR_ERROR,
-					"database access error",
-					e);
-		} catch (final XPathException e) {
-			throw new XMLDBException(ErrorCodes.VENDOR_ERROR,
-					e.getMessage(), e);
-		} catch (final PermissionDeniedException e) {
-			throw new XMLDBException(ErrorCodes.PERMISSION_DENIED,
-					e.getMessage(), e);
-		} finally {
-			pool.release(broker);
-			pool.setSubject(preserveSubject);
-		}
 	}
 }

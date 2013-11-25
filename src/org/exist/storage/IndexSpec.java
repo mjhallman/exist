@@ -62,9 +62,6 @@ public class IndexSpec {
     private static final String PATH_ATTRIB = "path";
     private static final String CREATE_ELEMENT = "create";
     private static final String QNAME_ATTRIB = "qname";
-    private static final String FULLTEXT_ELEMENT = "fulltext";
-
-    private FulltextIndexSpec ftSpec = null;
 
     private GeneralRangeIndexSpec specs[] = null;
     private Map<QName, QNameRangeIndexSpec> qnameSpecs = new TreeMap<QName, QNameRangeIndexSpec>();
@@ -90,9 +87,7 @@ public class IndexSpec {
         for (int i = 0; i < childNodes.getLength(); i++) {
             final Node node = childNodes.item(i);
             if (node.getNodeType() == Node.ELEMENT_NODE) {
-                if (FULLTEXT_ELEMENT.equals(node.getLocalName())) {
-                    ftSpec = new FulltextIndexSpec(namespaces, (Element)node);
-                } else if (CREATE_ELEMENT.equals(node.getLocalName())) {
+                if (CREATE_ELEMENT.equals(node.getLocalName())) {
                     final Element elem = (Element) node;
                     final String type = elem.getAttribute(TYPE_ATTRIB);
                     if (elem.hasAttribute(QNAME_ATTRIB)) {
@@ -115,14 +110,6 @@ public class IndexSpec {
         // the default index config from conf.xml)
         if (broker != null)
             {customIndexSpecs = broker.getIndexController().configure(childNodes, namespaces);}
-    }
-
-    /**
-     * Returns the fulltext index configuration object for the current
-     * configuration.
-     */
-    public FulltextIndexSpec getFulltextIndexSpec() {
-        return ftSpec;
     }
 
     /**
@@ -225,8 +212,6 @@ public class IndexSpec {
 
     public String toString() {
         final StringBuilder result = new StringBuilder();
-        if (ftSpec != null)
-            {result.append(ftSpec.toString()).append('\n');}
         if (specs!= null) {
             for (int i = 0 ; i < specs.length ; i++) {
                 final GeneralRangeIndexSpec spec = specs[i];

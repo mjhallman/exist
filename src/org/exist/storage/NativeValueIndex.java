@@ -347,7 +347,7 @@ public class NativeValueIndex implements ContentLoadingObserver {
     }
 
 
-    public void storeText( TextImpl node, NodePath currentPath, int indexingHint )
+    public void storeText( TextImpl node, NodePath currentPath )
     {
         // TODO Auto-generated method stub
     }

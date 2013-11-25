@@ -42,7 +42,6 @@ import org.exist.memtree.NodeImpl;
 import org.exist.numbering.NodeId;
 import org.exist.protocolhandler.embedded.EmbeddedInputStream;
 import org.exist.protocolhandler.xmldb.XmldbURL;
-import org.exist.repo.RepoBackup;
 import org.exist.security.ACLPermission;
 import org.exist.security.AXSchemaType;
 import org.exist.security.Account;
@@ -83,7 +82,6 @@ import org.exist.xquery.util.HTTPUtils;
 import org.exist.xquery.value.*;
 import org.exist.xupdate.Modification;
 import org.exist.xupdate.XUpdateProcessor;
-import org.expath.pkg.repo.PackageException;
 import org.w3c.dom.DocumentType;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -4706,107 +4704,6 @@ public class RpcConnection implements RpcAPI {
                 {collection.release(Lock.READ_LOCK);}
             factory.getBrokerPool().release(broker);
         }
-    }
-    
-    /**
-     * The method <code>scanIndexTerms</code>
-     *
-     * @param collectionName a <code>String</code> value
-     * @param start a <code>String</code> value
-     * @param end a <code>String</code> value
-     * @param inclusive a <code>boolean</code> value
-     * @return a <code>Vector</code> value
-     * @exception PermissionDeniedException if an error occurs
-     * @exception EXistException if an error occurs
-     * @exception URISyntaxException if an error occurs
-     */
-    @Override
-    public Vector<Vector<Object>> scanIndexTerms(String collectionName,
-            String start, String end, boolean inclusive)
-            throws PermissionDeniedException, EXistException, URISyntaxException {
-    	return scanIndexTerms(XmldbURI.xmldbUriFor(collectionName),start,end,inclusive);
-    }    
-
-    /**
-     * The method <code>scanIndexTerms</code>
-     *
-     * @param collUri a <code>XmldbURI</code> value
-     * @param start a <code>String</code> value
-     * @param end a <code>String</code> value
-     * @param inclusive a <code>boolean</code> value
-     * @return a <code>Vector</code> value
-     * @exception PermissionDeniedException if an error occurs
-     * @exception EXistException if an error occurs
-     */
-    private Vector<Vector<Object>> scanIndexTerms(XmldbURI collUri,
-            String start, String end, boolean inclusive)
-            throws PermissionDeniedException, EXistException {
-        DBBroker broker = null;
-        Collection collection = null;
-        try {
-            broker = factory.getBrokerPool().get(user);
-            collection = broker.openCollection(collUri, Lock.READ_LOCK);
-            if (collection == null)
-                {throw new EXistException("collection " + collUri + " not found");}
-            final MutableDocumentSet docs = new DefaultDocumentSet();
-            collection.allDocs(broker, docs, inclusive);
-            final NodeSet nodes = docs.docsToNodeSet();
-            final Vector<Vector<Object>> result = scanIndexTerms(start, end, broker, docs, nodes);
-            return result;
-        } finally {
-            if(collection != null)
-                {collection.release(Lock.READ_LOCK);}
-            factory.getBrokerPool().release(broker);
-        }
-    }
-    
-    /**
-     * The method <code>scanIndexTerms</code>
-     *
-     * @param xpath a <code>String</code> value
-     * @param start a <code>String</code> value
-     * @param end a <code>String</code> value
-     * @return a <code>Vector</code> value
-     * @exception PermissionDeniedException if an error occurs
-     * @exception EXistException if an error occurs
-     * @exception XPathException if an error occurs
-     */
-    @Override
-    public Vector<Vector<Object>> scanIndexTerms(String xpath,
-            String start, String end)
-            throws PermissionDeniedException, EXistException, XPathException {
-        DBBroker broker = null;
-        try {
-            broker = factory.getBrokerPool().get(user);
-            final XQuery xquery = broker.getXQueryService();
-            final Sequence nodes = xquery.execute(xpath, null, AccessContext.XMLRPC);
-            final Vector<Vector<Object>> result = scanIndexTerms(start, end, broker, nodes.getDocumentSet(), nodes.toNodeSet());
-            return result;
-        } finally {
-            factory.getBrokerPool().release(broker);
-        }
-    }
-    
-    /**
-     * @param start
-     * @param end
-     * @param broker
-     * @param docs
-     * @throws PermissionDeniedException
-     */
-    private Vector<Vector<Object>> scanIndexTerms(String start, String end, DBBroker broker, DocumentSet docs, NodeSet nodes)
-    throws PermissionDeniedException {
-        final Occurrences occurrences[] =
-                broker.getTextEngine().scanIndexTerms(docs, nodes, start, end);
-        final Vector<Vector<Object>> result = new Vector<Vector<Object>>(occurrences.length);
-        Vector<Object> temp;
-        for (int i = 0; i < occurrences.length; i++) {
-            temp = new Vector<Object>(2);
-            temp.addElement(occurrences[i].getTerm().toString());
-            temp.addElement(Integer.valueOf(occurrences[i].getOccurrences()));
-            result.addElement(temp);
-        }
-        return result;
     }
     
     /**

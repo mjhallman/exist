@@ -24,6 +24,7 @@ package org.exist.xquery.functions.text;
 
 import java.util.List;
 
+import org.exist.dom.NewArrayNodeSet;
 import org.exist.dom.NodeSet;
 import org.exist.dom.QName;
 import org.exist.storage.TermMatcher;
@@ -42,6 +43,7 @@ import org.exist.xquery.value.Type;
 /**
  * @author Wolfgang Meier (wolfgang@exist-db.org)
  */
+@Deprecated //XXX: right?
 public class FuzzyMatchAll extends AbstractMatchFunction {
 
 	public final static FunctionSignature signature = new FunctionSignature(
@@ -65,34 +67,37 @@ public class FuzzyMatchAll extends AbstractMatchFunction {
 	
 	public Sequence evalQuery(NodeSet nodes,
 								List<String> terms) throws XPathException {
-		if (terms == null || terms.size() == 0)
-			{return Sequence.EMPTY_SEQUENCE;} // no search terms
-		double threshold = 0.65;
-		if (getArgumentCount() == 3) {
-			final Sequence thresOpt = getArgument(2).eval(nodes);
-			//TODO : get rid of getLength()
-			if(!thresOpt.hasOne())
-				{throw new XPathException(this, "third argument to " + getName() +
-						"should be a single double value");}
-			threshold = ((DoubleValue) thresOpt.convertTo(Type.DOUBLE)).getDouble();
-		}
-		final NodeSet hits[] = new NodeSet[terms.size()];
-		String term;
-		TermMatcher matcher;
-		for (int k = 0; k < terms.size(); k++) {
-		    term = terms.get(k);
-			if(term.length() == 0)
-				{hits[k] = null;}
-			else {
-				matcher = new FuzzyMatcher(term, threshold);
-				hits[k] =
-					context.getBroker().getTextEngine().getNodes(
-					    context,
-						nodes.getDocumentSet(),
-						nodes, NodeSet.ANCESTOR, null,
-						matcher, term.substring(0, 1));
-			}
-		}
-		return mergeResults(hits);
+	    
+        throw new XPathException(this, "deprecated, because old FT removed");
+
+//		if (terms == null || terms.size() == 0)
+//			{return Sequence.EMPTY_SEQUENCE;} // no search terms
+//		double threshold = 0.65;
+//		if (getArgumentCount() == 3) {
+//			final Sequence thresOpt = getArgument(2).eval(nodes);
+//			//TODO : get rid of getLength()
+//			if(!thresOpt.hasOne())
+//				{throw new XPathException(this, "third argument to " + getName() +
+//						"should be a single double value");}
+//			threshold = ((DoubleValue) thresOpt.convertTo(Type.DOUBLE)).getDouble();
+//		}
+//		final NodeSet hits[] = new NodeSet[terms.size()];
+//		String term;
+//		TermMatcher matcher;
+//		for (int k = 0; k < terms.size(); k++) {
+//		    term = terms.get(k);
+//			if(term.length() == 0)
+//				{hits[k] = null;}
+//			else {
+//				matcher = new FuzzyMatcher(term, threshold);
+//				hits[k] = 
+//					context.getBroker().getTextEngine().getNodes(
+//					    context,
+//						nodes.getDocumentSet(),
+//						nodes, NodeSet.ANCESTOR, null,
+//						matcher, term.substring(0, 1));
+//			}
+//		}
+//		return mergeResults(hits);
 	}
 }

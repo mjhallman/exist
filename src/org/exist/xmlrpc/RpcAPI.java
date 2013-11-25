@@ -824,18 +824,6 @@ public interface RpcAPI {
 	Vector<Vector<Object>> getIndexedElements(String collectionName, boolean inclusive)
 		throws EXistException, PermissionDeniedException, URISyntaxException;
 
-	Vector<Vector<Object>> scanIndexTerms(
-
-		String collectionName,
-		String start,
-		String end,
-		boolean inclusive)
-		throws PermissionDeniedException, EXistException, URISyntaxException;
-
-	Vector<Vector<Object>> scanIndexTerms(String xpath,
-			String start, String end)
-			throws PermissionDeniedException, EXistException, XPathException;
-	
 	boolean releaseQueryResult(int handle);
 
     boolean releaseQueryResult(int handle, int hash);

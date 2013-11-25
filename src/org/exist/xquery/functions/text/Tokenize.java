@@ -24,8 +24,6 @@ package org.exist.xquery.functions.text;
 
 
 import org.exist.dom.QName;
-import org.exist.storage.analysis.SimpleTokenizer;
-import org.exist.storage.analysis.TextToken;
 import org.exist.xquery.BasicFunction;
 import org.exist.xquery.Cardinality;
 import org.exist.xquery.FunctionSignature;
@@ -39,11 +37,10 @@ import org.exist.xquery.value.StringValue;
 import org.exist.xquery.value.Type;
 import org.exist.xquery.value.ValueSequence;
 
-
-
 /**
  * @author Wolfgang Meier (wolfgang@exist-db.org)
  */
+@Deprecated //XXX: right?
 public class Tokenize extends BasicFunction {
 
 	public final static FunctionSignature signature = new FunctionSignature(
@@ -62,17 +59,20 @@ public class Tokenize extends BasicFunction {
 	 */
 	public Sequence eval(Sequence[] args, Sequence contextSequence)
 		throws XPathException {
-		if(args[0].isEmpty())
-			{return Sequence.EMPTY_SEQUENCE;}
-		
-		final ValueSequence result = new ValueSequence();
-		final SimpleTokenizer tokenizer = new SimpleTokenizer();
-		tokenizer.setText(args[0].getStringValue());
-		TextToken token = tokenizer.nextToken(false);
-		while(token != null && token.getType() != TextToken.EOF) {
-			result.add(new StringValue(token.getText()));
-			token = tokenizer.nextToken(false);
-		}
-		return result;
+	    
+        throw new XPathException(this, "deprecated, because old FT removed");
+
+//		if(args[0].isEmpty())
+//			{return Sequence.EMPTY_SEQUENCE;}
+//		
+//		final ValueSequence result = new ValueSequence();
+//		final SimpleTokenizer tokenizer = new SimpleTokenizer();
+//		tokenizer.setText(args[0].getStringValue());
+//		TextToken token = tokenizer.nextToken(false);
+//		while(token != null && token.getType() != TextToken.EOF) {
+//			result.add(new StringValue(token.getText()));
+//			token = tokenizer.nextToken(false);
+//		}
+//		return result;
 	}
 }

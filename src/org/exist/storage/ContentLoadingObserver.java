@@ -46,7 +46,7 @@ public interface ContentLoadingObserver {
 	public void storeAttribute(AttrImpl node, NodePath currentPath, int indexingHint, RangeIndexSpec spec, boolean remove);
 
 	/** store and index given text node */ 
-	public void storeText(TextImpl node, NodePath currentPath, int indexingHint);
+	public void storeText(TextImpl node, NodePath currentPath);
 			
 	/**
 	 * The given node is being removed from the database. 

@@ -27,7 +27,6 @@ import org.exist.dom.QName;
 import org.exist.security.PermissionDeniedException;
 import org.exist.storage.DBBroker;
 import org.exist.storage.IndexSpec;
-import org.exist.storage.FulltextIndexSpec;
 import org.exist.util.Occurrences;
 import org.exist.xquery.*;
 import org.exist.xquery.value.*;
@@ -37,6 +36,7 @@ import java.util.*;
 /**
  * @author wolf
  */
+@Deprecated //XXX: right?
 public class IndexTerms extends BasicFunction {
 
     public final static FunctionSignature signatures[] = new FunctionSignature[] {
@@ -97,77 +97,80 @@ public class IndexTerms extends BasicFunction {
      */
     public Sequence eval(Sequence[] args, Sequence contextSequence)
         throws XPathException {
-        int arg = 0;
-        if (args[arg].isEmpty()) {
-            return Sequence.EMPTY_SEQUENCE;
-        }
-        final NodeSet nodes = args[arg++].toNodeSet();
-        final DocumentSet docs = nodes.getDocumentSet();
-        QName[] qnames = null;
-        if (args.length == 5) {
-            qnames = new QName[args[arg].getItemCount()];
-            int q = 0;
-            for (final SequenceIterator i = args[arg].iterate(); i.hasNext(); q++) {
-                final QNameValue qnv = (QNameValue) i.nextItem();
-                qnames[q] = qnv.getQName();
-            }
-            ++arg;
-        } else
-            {qnames = getDefinedIndexes(context.getBroker(), docs);}
-        String start = null;
-        if (!args[arg].isEmpty())
-            {start = args[arg].getStringValue();}
-        final FunctionReference ref = (FunctionReference) args[++arg].itemAt(0);
-        final int max = ((IntegerValue) args[++arg].itemAt(0)).getInt();
-        final Sequence result = new ValueSequence();
-        try {
-            Occurrences occur[] = context.getBroker().getTextEngine().scanIndexTerms(docs, nodes, qnames, start, null);
-            if (args.length == 4) {
-                Occurrences occur2[] = context.getBroker().getTextEngine().scanIndexTerms(docs, nodes, start, null);
-                if (occur == null || occur.length == 0)
-                    {occur = occur2;}
-                else {
-                    Occurrences t[] = new Occurrences[occur.length + occur2.length];
-                    System.arraycopy(occur, 0, t, 0, occur.length);
-                    System.arraycopy(occur2, 0, t, occur.length, occur2.length);
-                    occur = t;
-                }
-            }
-            final int len = (occur.length > max ? max : occur.length);
-            final Sequence params[] = new Sequence[2];
-            ValueSequence data = new ValueSequence();
+        
+        throw new XPathException(this, "deprecated, because old FT removed");
 
-            final Vector<Integer> list = new Vector<Integer>(len);
-            for (int j = 0; j < len; j++) {
-                if (!list.contains(Integer.valueOf(occur[j].getOccurrences()))) {
-                    list.add(Integer.valueOf(occur[j].getOccurrences()));
-                }
-            }
-            Collections.sort(list);
-            Collections.reverse(list);
-            final HashMap<Integer, Integer> map = new HashMap<Integer, Integer>(list.size() * 2);
-            for (int j = 0; j < list.size(); j++) {
-                map.put(list.get(j), Integer.valueOf(j + 1));
-            }
-
-            for (int j = 0; j < len; j++) {
-                params[0] = new StringValue(occur[j].getTerm().toString());
-                data.add(new IntegerValue(occur[j].getOccurrences(), Type.UNSIGNED_INT));
-                data.add(new IntegerValue(occur[j].getDocuments(), Type.UNSIGNED_INT));
-                data.add(new IntegerValue(j + 1, Type.UNSIGNED_INT));
-                data.add(new IntegerValue((map.get(Integer.valueOf(occur[j].getOccurrences()))).intValue(), Type.UNSIGNED_INT));
-
-                params[1] = data;
-
-                result.addAll(ref.evalFunction(contextSequence, null, params));
-                data.clear();
-            }
-            if (LOG.isDebugEnabled())
-                {LOG.debug("Returning: " + result.getItemCount());}
-            return result;
-        } catch (final PermissionDeniedException e) {
-            throw new XPathException(this, e);
-        }
+//        int arg = 0;
+//        if (args[arg].isEmpty()) {
+//            return Sequence.EMPTY_SEQUENCE;
+//        }
+//        final NodeSet nodes = args[arg++].toNodeSet();
+//        final DocumentSet docs = nodes.getDocumentSet();
+//        QName[] qnames = null;
+//        if (args.length == 5) {
+//            qnames = new QName[args[arg].getItemCount()];
+//            int q = 0;
+//            for (final SequenceIterator i = args[arg].iterate(); i.hasNext(); q++) {
+//                final QNameValue qnv = (QNameValue) i.nextItem();
+//                qnames[q] = qnv.getQName();
+//            }
+//            ++arg;
+//        } else
+//            {qnames = getDefinedIndexes(context.getBroker(), docs);}
+//        String start = null;
+//        if (!args[arg].isEmpty())
+//            {start = args[arg].getStringValue();}
+//        final FunctionReference ref = (FunctionReference) args[++arg].itemAt(0);
+//        final int max = ((IntegerValue) args[++arg].itemAt(0)).getInt();
+//        final Sequence result = new ValueSequence();
+//        try {
+//            Occurrences occur[] = context.getBroker().getTextEngine().scanIndexTerms(docs, nodes, qnames, start, null);
+//            if (args.length == 4) {
+//                Occurrences occur2[] = context.getBroker().getTextEngine().scanIndexTerms(docs, nodes, start, null);
+//                if (occur == null || occur.length == 0)
+//                    {occur = occur2;}
+//                else {
+//                    Occurrences t[] = new Occurrences[occur.length + occur2.length];
+//                    System.arraycopy(occur, 0, t, 0, occur.length);
+//                    System.arraycopy(occur2, 0, t, occur.length, occur2.length);
+//                    occur = t;
+//                }
+//            }
+//            final int len = (occur.length > max ? max : occur.length);
+//            final Sequence params[] = new Sequence[2];
+//            ValueSequence data = new ValueSequence();
+//
+//            final Vector<Integer> list = new Vector<Integer>(len);
+//            for (int j = 0; j < len; j++) {
+//                if (!list.contains(Integer.valueOf(occur[j].getOccurrences()))) {
+//                    list.add(Integer.valueOf(occur[j].getOccurrences()));
+//                }
+//            }
+//            Collections.sort(list);
+//            Collections.reverse(list);
+//            final HashMap<Integer, Integer> map = new HashMap<Integer, Integer>(list.size() * 2);
+//            for (int j = 0; j < list.size(); j++) {
+//                map.put(list.get(j), Integer.valueOf(j + 1));
+//            }
+//
+//            for (int j = 0; j < len; j++) {
+//                params[0] = new StringValue(occur[j].getTerm().toString());
+//                data.add(new IntegerValue(occur[j].getOccurrences(), Type.UNSIGNED_INT));
+//                data.add(new IntegerValue(occur[j].getDocuments(), Type.UNSIGNED_INT));
+//                data.add(new IntegerValue(j + 1, Type.UNSIGNED_INT));
+//                data.add(new IntegerValue((map.get(Integer.valueOf(occur[j].getOccurrences()))).intValue(), Type.UNSIGNED_INT));
+//
+//                params[1] = data;
+//
+//                result.addAll(ref.evalFunction(contextSequence, null, params));
+//                data.clear();
+//            }
+//            if (LOG.isDebugEnabled())
+//                {LOG.debug("Returning: " + result.getItemCount());}
+//            return result;
+//        } catch (final PermissionDeniedException e) {
+//            throw new XPathException(this, e);
+//        }
     }
 
      /**
@@ -180,11 +183,11 @@ public class IndexTerms extends BasicFunction {
             final org.exist.collections.Collection collection = i.next();
             final IndexSpec idxConf = collection.getIndexConfiguration(broker);
             if (idxConf != null) {
-                final FulltextIndexSpec fIdxConf = idxConf.getFulltextIndexSpec();
-                final List<QName> qnames = fIdxConf.getIndexedQNames();
-                for (final QName qName : qnames) {
-                    indexes.add(qName);
-                }
+//                final FulltextIndexSpec fIdxConf = idxConf.getFulltextIndexSpec();
+//                final List<QName> qnames = fIdxConf.getIndexedQNames();
+//                for (final QName qName : qnames) {
+//                    indexes.add(qName);
+//                }
             }
         }
         final QName qnames[] = new QName[indexes.size()];

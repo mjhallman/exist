@@ -30,7 +30,6 @@ import org.exist.dom.NodeSet;
 import org.exist.dom.QName;
 import org.exist.storage.DBBroker;
 import org.exist.storage.ElementValue;
-import org.exist.storage.FulltextIndexSpec;
 import org.exist.xmldb.XmldbURI;
 import org.exist.xquery.AnalyzeContextInfo;
 import org.exist.xquery.BasicExpressionVisitor;
@@ -156,7 +155,7 @@ public class DeprecatedExtRegexp extends Function implements Optimizable {
     public boolean canOptimize(Sequence contextSequence) {
         if (contextQName == null)
             {return false;}
-        return checkForQNameIndex(contextSequence);
+        return false; //checkForQNameIndex(contextSequence);
     }
 
     public boolean optimizeOnSelf() {
@@ -172,30 +171,30 @@ public class DeprecatedExtRegexp extends Function implements Optimizable {
     }
     
     public NodeSet preSelect(Sequence contextSequence, boolean useContext) throws XPathException {
-    	if (contextSequence != null && !contextSequence.isPersistentSet())
-    		{return NodeSet.EMPTY_SET;}
-    	
-        // the expression can be called multiple times, so we need to clear the previous preselectResult
-        preselectResult = null;
-        
-        // get the search terms
-        final List<String> terms = getSearchTerms(contextSequence);
-
-        // lookup the terms in the fulltext index. returns one node set for each term
-        final NodeSet[] hits = getMatches(contextSequence.getDocumentSet(),
-                useContext ? contextSequence.toNodeSet() : null, NodeSet.DESCENDANT, contextQName, terms);
-        // walk through the matches and compute the combined node set
-        preselectResult = hits[0];
-        if (preselectResult != null) {
-            for(int k = 1; k < hits.length; k++) {
-                if(hits[k] != null) {
-                    preselectResult = (type == Constants.FULLTEXT_AND ? preselectResult.deepIntersection(hits[k])
-                            : preselectResult.union(hits[k]));
-                }
-            }
-        } else {
+//    	if (contextSequence != null && !contextSequence.isPersistentSet())
+//    		{return NodeSet.EMPTY_SET;}
+//    	
+//        // the expression can be called multiple times, so we need to clear the previous preselectResult
+//        preselectResult = null;
+//        
+//        // get the search terms
+//        final List<String> terms = getSearchTerms(contextSequence);
+//
+//        // lookup the terms in the fulltext index. returns one node set for each term
+//        final NodeSet[] hits = getMatches(contextSequence.getDocumentSet(),
+//                useContext ? contextSequence.toNodeSet() : null, NodeSet.DESCENDANT, contextQName, terms);
+//        // walk through the matches and compute the combined node set
+//        preselectResult = hits[0];
+//        if (preselectResult != null) {
+//            for(int k = 1; k < hits.length; k++) {
+//                if(hits[k] != null) {
+//                    preselectResult = (type == Constants.FULLTEXT_AND ? preselectResult.deepIntersection(hits[k])
+//                            : preselectResult.union(hits[k]));
+//                }
+//            }
+//        } else {
             preselectResult = NodeSet.EMPTY_SET;
-        }
+//        }
         return preselectResult;
     }
 
@@ -203,96 +202,99 @@ public class DeprecatedExtRegexp extends Function implements Optimizable {
 		Sequence contextSequence,
 		Item contextItem)
 		throws XPathException {
-        logger.error("Use of deprecated function fn:match-all()/fn:match-any(). " +
-                     "It will be removed soon. Please " +
-                     "use text:match-all() or text:match-any() instead.");
-
-        // if we were optimizing and the preselect did not return anything,
-        // we won't have any matches and can return
-        if (preselectResult != null && preselectResult.isEmpty())
-            {return Sequence.EMPTY_SEQUENCE;}
-
-        if (contextItem != null)
-			{contextSequence = contextItem.toSequence();}
-
-        if (contextSequence != null && !contextSequence.isPersistentSet())
-        	{return Sequence.EMPTY_SEQUENCE;}
         
-        if (preselectResult == null && !checkForQNameIndex(contextSequence))
-            {contextQName = null;}
+        throw new XPathException(this, "deprecated, because old FT removed");
 
-        final Expression path = getArgument(0);
-        NodeSet result;
-		// if the expression does not depend on the current context item,
-		// we can evaluate it in one single step
-		if (path == null || !Dependency.dependsOn(path, Dependency.CONTEXT_ITEM)) {
-			final boolean canCache =
-                (getTermDependencies() & Dependency.CONTEXT_ITEM) == Dependency.NO_DEPENDENCY;
-            if(	canCache && cached != null && cached.isValid(contextSequence, contextItem)) {
-				return cached.getResult();
-			}
-            // do we optimize this expression?
-            if (contextStep == null || preselectResult == null) {
-                // no optimization: process the whole expression
-                final NodeSet nodes =
-                    path == null
-                        ? contextSequence.toNodeSet()
-                        : path.eval(contextSequence).toNodeSet();
-                final List<String> terms = getSearchTerms(contextSequence);
-                result = evalQuery(nodes, terms).toNodeSet();
-            } else {
-                contextStep.setPreloadedData(contextSequence.getDocumentSet(), preselectResult);
-                result = path.eval(contextSequence).toNodeSet();
-            }
-            if(canCache && contextSequence.isCacheable())
-				{cached = new CachedResult(contextSequence, contextItem, result);}
-
-		// otherwise we have to walk through each item in the context
-		} else {
-			Item current;
-			final @SuppressWarnings("unused")
-			String arg;
-			NodeSet nodes;
-			result = new ExtArrayNodeSet();
-			Sequence temp;
-			for (final SequenceIterator i = contextSequence.iterate(); i.hasNext();) {
-				current = i.nextItem();
-				final List<String> terms = getSearchTerms(contextSequence);
-				nodes =
-					path == null
-					? contextSequence.toNodeSet()
-							: path
-							.eval(current.toSequence()).toNodeSet();
-				temp = evalQuery(nodes, terms);
-				result.addAll(temp);
-			}
-		}
-        preselectResult = null;
-        return result;
+//        logger.error("Use of deprecated function fn:match-all()/fn:match-any(). " +
+//                     "It will be removed soon. Please " +
+//                     "use text:match-all() or text:match-any() instead.");
+//
+//        // if we were optimizing and the preselect did not return anything,
+//        // we won't have any matches and can return
+//        if (preselectResult != null && preselectResult.isEmpty())
+//            {return Sequence.EMPTY_SEQUENCE;}
+//
+//        if (contextItem != null)
+//			{contextSequence = contextItem.toSequence();}
+//
+//        if (contextSequence != null && !contextSequence.isPersistentSet())
+//        	{return Sequence.EMPTY_SEQUENCE;}
+//        
+//        if (preselectResult == null && !checkForQNameIndex(contextSequence))
+//            {contextQName = null;}
+//
+//        final Expression path = getArgument(0);
+//        NodeSet result;
+//		// if the expression does not depend on the current context item,
+//		// we can evaluate it in one single step
+//		if (path == null || !Dependency.dependsOn(path, Dependency.CONTEXT_ITEM)) {
+//			final boolean canCache =
+//                (getTermDependencies() & Dependency.CONTEXT_ITEM) == Dependency.NO_DEPENDENCY;
+//            if(	canCache && cached != null && cached.isValid(contextSequence, contextItem)) {
+//				return cached.getResult();
+//			}
+//            // do we optimize this expression?
+//            if (contextStep == null || preselectResult == null) {
+//                // no optimization: process the whole expression
+//                final NodeSet nodes =
+//                    path == null
+//                        ? contextSequence.toNodeSet()
+//                        : path.eval(contextSequence).toNodeSet();
+//                final List<String> terms = getSearchTerms(contextSequence);
+//                result = evalQuery(nodes, terms).toNodeSet();
+//            } else {
+//                contextStep.setPreloadedData(contextSequence.getDocumentSet(), preselectResult);
+//                result = path.eval(contextSequence).toNodeSet();
+//            }
+//            if(canCache && contextSequence.isCacheable())
+//				{cached = new CachedResult(contextSequence, contextItem, result);}
+//
+//		// otherwise we have to walk through each item in the context
+//		} else {
+//			Item current;
+//			final @SuppressWarnings("unused")
+//			String arg;
+//			NodeSet nodes;
+//			result = new ExtArrayNodeSet();
+//			Sequence temp;
+//			for (final SequenceIterator i = contextSequence.iterate(); i.hasNext();) {
+//				current = i.nextItem();
+//				final List<String> terms = getSearchTerms(contextSequence);
+//				nodes =
+//					path == null
+//					? contextSequence.toNodeSet()
+//							: path
+//							.eval(current.toSequence()).toNodeSet();
+//				temp = evalQuery(nodes, terms);
+//				result.addAll(temp);
+//			}
+//		}
+//        preselectResult = null;
+//        return result;
 	}
 
-    private boolean checkForQNameIndex(Sequence contextSequence) {
-        if (contextSequence == null || contextQName == null)
-            {return false;}
-        boolean hasQNameIndex = true;
-        for (final Iterator<Collection> i = contextSequence.getCollectionIterator(); i.hasNext(); ) {
-            final Collection collection = i.next();
-            if (collection.getURI().equals(XmldbURI.SYSTEM_COLLECTION_URI))
-                {continue;}
-            final FulltextIndexSpec config = collection.getFulltextIndexConfiguration(context.getBroker());
-            //We have a fulltext index
-            if (config != null) {
-            	hasQNameIndex = config.hasQNameIndex(contextQName);
-            }
-            if (!hasQNameIndex) {
-                if (LOG.isTraceEnabled())
-                    {LOG.trace("cannot use index on QName: " + contextQName + ". Collection " + collection.getURI() +
-                        " does not define an index");}
-                break;
-            }
-        }
-        return hasQNameIndex;
-    }
+//    private boolean checkForQNameIndex(Sequence contextSequence) {
+//        if (contextSequence == null || contextQName == null)
+//            {return false;}
+//        boolean hasQNameIndex = true;
+//        for (final Iterator<Collection> i = contextSequence.getCollectionIterator(); i.hasNext(); ) {
+//            final Collection collection = i.next();
+//            if (collection.getURI().equals(XmldbURI.SYSTEM_COLLECTION_URI))
+//                {continue;}
+//            final FulltextIndexSpec config = collection.getFulltextIndexConfiguration(context.getBroker());
+//            //We have a fulltext index
+//            if (config != null) {
+//            	hasQNameIndex = config.hasQNameIndex(contextQName);
+//            }
+//            if (!hasQNameIndex) {
+//                if (LOG.isTraceEnabled())
+//                    {LOG.trace("cannot use index on QName: " + contextQName + ". Collection " + collection.getURI() +
+//                        " does not define an index");}
+//                break;
+//            }
+//        }
+//        return hasQNameIndex;
+//    }
 
     /* (non-Javadoc)
 	 * @see org.exist.xquery.functions.Function#getDependencies()
@@ -307,40 +309,40 @@ public class DeprecatedExtRegexp extends Function implements Optimizable {
 	/* (non-Javadoc)
 	 * @see org.exist.xquery.functions.ExtFulltext#evalQuery(org.exist.xquery.StaticContext, org.exist.dom.DocumentSet, java.lang.String, org.exist.dom.NodeSet)
 	 */
-	public Sequence evalQuery(
-		NodeSet nodes,
-		List<String> terms)
-		throws XPathException {
-		if(terms == null || terms.size() == 0)
-			{return Sequence.EMPTY_SEQUENCE;}	// no search terms
-        final NodeSet[] hits = getMatches(nodes.getDocumentSet(), nodes, NodeSet.ANCESTOR, contextQName, terms);
-		NodeSet result = hits[0];
-		if(result != null) {
-			for(int k = 1; k < hits.length; k++) {
-				if(hits[k] != null)
-					{result = (type == Constants.FULLTEXT_AND ?
-							result.deepIntersection(hits[k]) : result.union(hits[k]));}
-			}
-			return result;
-		} else
-			{return NodeSet.EMPTY_SET;}
-	}
+//	public Sequence evalQuery(
+//		NodeSet nodes,
+//		List<String> terms)
+//		throws XPathException {
+//		if(terms == null || terms.size() == 0)
+//			{return Sequence.EMPTY_SEQUENCE;}	// no search terms
+//        final NodeSet[] hits = getMatches(nodes.getDocumentSet(), nodes, NodeSet.ANCESTOR, contextQName, terms);
+//		NodeSet result = hits[0];
+//		if(result != null) {
+//			for(int k = 1; k < hits.length; k++) {
+//				if(hits[k] != null)
+//					{result = (type == Constants.FULLTEXT_AND ?
+//							result.deepIntersection(hits[k]) : result.union(hits[k]));}
+//			}
+//			return result;
+//		} else
+//			{return NodeSet.EMPTY_SET;}
+//	}
 
-    protected NodeSet[] getMatches(DocumentSet docs, NodeSet contextSet, int axis, QName qname, List<String> terms)
-    throws XPathException {
-        final NodeSet hits[] = new NodeSet[terms.size()];
-        for (int k = 0; k < terms.size(); k++) {
-            hits[k] =
-                    context.getBroker().getTextEngine().getNodesContaining(
-                            context,
-                            docs,
-                            contextSet, axis,
-                            qname, (String) terms.get(k),
-                            DBBroker.MATCH_REGEXP);
-            LOG.debug("Matches for " + terms.get(k) + ": " + hits[k].getLength());
-        }
-        return hits;
-    }
+//    protected NodeSet[] getMatches(DocumentSet docs, NodeSet contextSet, int axis, QName qname, List<String> terms)
+//    throws XPathException {
+//        final NodeSet hits[] = new NodeSet[terms.size()];
+//        for (int k = 0; k < terms.size(); k++) {
+//            hits[k] =
+//                    context.getBroker().getTextEngine().getNodesContaining(
+//                            context,
+//                            docs,
+//                            contextSet, axis,
+//                            qname, (String) terms.get(k),
+//                            DBBroker.MATCH_REGEXP);
+//            LOG.debug("Matches for " + terms.get(k) + ": " + hits[k].getLength());
+//        }
+//        return hits;
+//    }
 
     protected List<String> getSearchTerms(Sequence contextSequence) throws XPathException {
 		if(getArgumentCount() < 2)

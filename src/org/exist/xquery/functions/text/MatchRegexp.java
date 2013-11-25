@@ -24,11 +24,10 @@ package org.exist.xquery.functions.text;
 import org.exist.collections.Collection;
 import org.exist.dom.DocumentSet;
 import org.exist.dom.ExtArrayNodeSet;
+import org.exist.dom.NewArrayNodeSet;
 import org.exist.dom.NodeSet;
 import org.exist.dom.QName;
-import org.exist.storage.DBBroker;
 import org.exist.storage.ElementValue;
-import org.exist.storage.FulltextIndexSpec;
 import org.exist.xmldb.XmldbURI;
 import org.exist.xquery.AnalyzeContextInfo;
 import org.exist.xquery.BasicExpressionVisitor;
@@ -61,6 +60,7 @@ import java.util.List;
 /**
  * @author wolf
  */
+@Deprecated //XXX: right?
 public class MatchRegexp extends Function implements Optimizable {
 
 	protected static final FunctionParameterSequenceType SOURCE_PARAM = new FunctionParameterSequenceType("source", Type.NODE, Cardinality.ZERO_OR_MORE, "The node set that is to be searched for the keyword set");
@@ -233,67 +233,70 @@ public class MatchRegexp extends Function implements Optimizable {
 		Sequence contextSequence,
 		Item contextItem)
 		throws XPathException {
-        // if we were optimizing and the preselect did not return anything,
-        // we won't have any matches and can return
-        if (preselectResult != null && preselectResult.isEmpty())
-            {return Sequence.EMPTY_SEQUENCE;}
-
-        if (contextItem != null)
-			{contextSequence = contextItem.toSequence();}
-
-        if (preselectResult == null && !checkForQNameIndex(contextSequence))
-            {contextQName = null;}
-
-        final Expression path = getArgument(0);
-        final Expression termsExpr = getArgument(1);
-        final Expression flagsExpr = (getArgumentCount() == 3) ? getArgument(2) : null;
-        final boolean matchAll = getMatchFlag(flagsExpr, contextSequence);
-
-        NodeSet result;
-		// if the expression does not depend on the current context item,
-		// we can evaluate it in one single step
-		if (path == null || !Dependency.dependsOn(path, Dependency.CONTEXT_ITEM)) {
-			final boolean canCache =
-                (getTermDependencies() & Dependency.CONTEXT_ITEM) == Dependency.NO_DEPENDENCY;
-            if(	canCache && cached != null && cached.isValid(contextSequence, contextItem)) {
-				return cached.getResult();
-			}
-            // do we optimize this expression?
-            if (contextStep == null || preselectResult == null) {
-                // no optimization: process the whole expression
-                final NodeSet nodes =
-                    path == null
-                        ? contextSequence.toNodeSet()
-                        : path.eval(contextSequence).toNodeSet();
-                final List<String> terms = getSearchTerms(termsExpr, contextSequence);
-                result = evalQuery(nodes, terms, matchAll).toNodeSet();
-            } else {
-                contextStep.setPreloadedData(contextSequence.getDocumentSet(), preselectResult);
-                result = path.eval(contextSequence).toNodeSet();
-            }
-
-            if(canCache && contextSequence != null && contextSequence.isCacheable()) {
-                cached = new CachedResult(contextSequence, contextItem, result);
-            }
-
-		// otherwise we have to walk through each item in the context
-		} else {
-			Item current;
-//			String arg;
-			NodeSet nodes;
-			result = new ExtArrayNodeSet();
-			Sequence temp;
-			for (final SequenceIterator i = contextSequence.iterate(); i.hasNext();) {
-				current = i.nextItem();
-				final List<String> terms = getSearchTerms(termsExpr, contextSequence);
-				nodes =
-					path == null ? contextSequence.toNodeSet() : path.eval(current.toSequence()).toNodeSet();
-				temp = evalQuery(nodes, terms, matchAll);
-				result.addAll(temp);
-			}
-		}
-        preselectResult = null;
-        return result;
+        
+        throw new XPathException(this, "deprecated, because old FT removed");
+        
+//        // if we were optimizing and the preselect did not return anything,
+//        // we won't have any matches and can return
+//        if (preselectResult != null && preselectResult.isEmpty())
+//            {return Sequence.EMPTY_SEQUENCE;}
+//
+//        if (contextItem != null)
+//			{contextSequence = contextItem.toSequence();}
+//
+//        if (preselectResult == null && !checkForQNameIndex(contextSequence))
+//            {contextQName = null;}
+//
+//        final Expression path = getArgument(0);
+//        final Expression termsExpr = getArgument(1);
+//        final Expression flagsExpr = (getArgumentCount() == 3) ? getArgument(2) : null;
+//        final boolean matchAll = getMatchFlag(flagsExpr, contextSequence);
+//
+//        NodeSet result;
+//		// if the expression does not depend on the current context item,
+//		// we can evaluate it in one single step
+//		if (path == null || !Dependency.dependsOn(path, Dependency.CONTEXT_ITEM)) {
+//			final boolean canCache =
+//                (getTermDependencies() & Dependency.CONTEXT_ITEM) == Dependency.NO_DEPENDENCY;
+//            if(	canCache && cached != null && cached.isValid(contextSequence, contextItem)) {
+//				return cached.getResult();
+//			}
+//            // do we optimize this expression?
+//            if (contextStep == null || preselectResult == null) {
+//                // no optimization: process the whole expression
+//                final NodeSet nodes =
+//                    path == null
+//                        ? contextSequence.toNodeSet()
+//                        : path.eval(contextSequence).toNodeSet();
+//                final List<String> terms = getSearchTerms(termsExpr, contextSequence);
+//                result = evalQuery(nodes, terms, matchAll).toNodeSet();
+//            } else {
+//                contextStep.setPreloadedData(contextSequence.getDocumentSet(), preselectResult);
+//                result = path.eval(contextSequence).toNodeSet();
+//            }
+//
+//            if(canCache && contextSequence != null && contextSequence.isCacheable()) {
+//                cached = new CachedResult(contextSequence, contextItem, result);
+//            }
+//
+//		// otherwise we have to walk through each item in the context
+//		} else {
+//			Item current;
+////			String arg;
+//			NodeSet nodes;
+//			result = new ExtArrayNodeSet();
+//			Sequence temp;
+//			for (final SequenceIterator i = contextSequence.iterate(); i.hasNext();) {
+//				current = i.nextItem();
+//				final List<String> terms = getSearchTerms(termsExpr, contextSequence);
+//				nodes =
+//					path == null ? contextSequence.toNodeSet() : path.eval(current.toSequence()).toNodeSet();
+//				temp = evalQuery(nodes, terms, matchAll);
+//				result.addAll(temp);
+//			}
+//		}
+//        preselectResult = null;
+//        return result;
 	}
 
     private boolean checkForQNameIndex(Sequence contextSequence) {
@@ -304,11 +307,11 @@ public class MatchRegexp extends Function implements Optimizable {
             final Collection collection = i.next();
             if (collection.getURI().equals(XmldbURI.SYSTEM_COLLECTION_URI))
                 {continue;}
-            final FulltextIndexSpec config = collection.getFulltextIndexConfiguration(context.getBroker());
-            //We have a fulltext index
-            if (config != null) {
-            	hasQNameIndex = config.hasQNameIndex(contextQName);
-            }
+//            final FulltextIndexSpec config = collection.getFulltextIndexConfiguration(context.getBroker());
+//            //We have a fulltext index
+//            if (config != null) {
+//            	hasQNameIndex = config.hasQNameIndex(contextQName);
+//            }
             if (!hasQNameIndex) {
                 if (LOG.isTraceEnabled())
                     {LOG.trace("cannot use index on QName: " + contextQName + ". Collection " + collection.getURI() +
@@ -375,13 +378,13 @@ public class MatchRegexp extends Function implements Optimizable {
     throws XPathException {
         final NodeSet hits[] = new NodeSet[terms.size()];
         for (int k = 0; k < terms.size(); k++) {
-            hits[k] =
-                    context.getBroker().getTextEngine().getNodesContaining(
-                            context,
-                            docs,
-                            contextSet, axis,
-                            qname, terms.get(k),
-                            DBBroker.MATCH_REGEXP, matchAll);
+            hits[k] = new NewArrayNodeSet();
+//                    context.getBroker().getTextEngine().getNodesContaining(
+//                            context,
+//                            docs,
+//                            contextSet, axis,
+//                            qname, terms.get(k),
+//                            DBBroker.MATCH_REGEXP, matchAll);
             if (LOG.isDebugEnabled())
             	{LOG.debug("Matches for " + terms.get(k) + ": " + hits[k].getLength());}
         }

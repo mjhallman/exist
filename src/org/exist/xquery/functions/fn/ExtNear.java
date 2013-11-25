@@ -29,10 +29,6 @@ import org.exist.EXistException;
 import org.exist.dom.ExtArrayNodeSet;
 import org.exist.dom.NodeProxy;
 import org.exist.dom.NodeSet;
-import org.exist.fulltext.FTIndex;
-import org.exist.storage.NativeTextEngine;
-import org.exist.storage.analysis.TextToken;
-import org.exist.storage.analysis.Tokenizer;
 import org.exist.util.GlobToRegex;
 import org.exist.xquery.AnalyzeContextInfo;
 import org.exist.xquery.Constants;
@@ -50,6 +46,7 @@ import org.exist.xquery.value.Type;
  * 
  * @author Wolfgang Meier <wolfgang@exist-db.org> (July 31, 2002)
  */
+@Deprecated //XXX: right?
 public class ExtNear extends ExtFulltext {
 
     private int min_distance = 1;
@@ -77,198 +74,201 @@ public class ExtNear extends ExtFulltext {
 
     public NodeSet preSelect(Sequence contextSequence, boolean useContext)
             throws XPathException {
-        final long start = System.currentTimeMillis();
-        //The expression can be called multiple times, so we need to
-        //clear the previous preselectResult
-        preselectResult = null;
-        if (maxDistance != null) {
-            max_distance = ((IntegerValue) maxDistance.eval(contextSequence).convertTo(Type.INTEGER)).getInt();
-        }
-        if (minDistance != null) {
-            min_distance = ((IntegerValue) minDistance.eval(contextSequence).convertTo(Type.INTEGER)).getInt();
-        }
-        //Get the search terms
-        final String arg = searchTerm.eval(contextSequence).getStringValue();
-        String[] terms;
-        try {
-            terms = getSearchTerms(arg);
-        } catch (final EXistException e) {
-            throw new XPathException(e.getMessage());
-        }
-        //Lookup the terms in the full-text index. returns one node set for each term
-        final NodeSet[] hits = getMatches(contextSequence.getDocumentSet(),
-                useContext ? contextSequence.toNodeSet() : null,
-                NodeSet.DESCENDANT, contextQName, terms);
-        //Walk through the matches and compute the combined node set
-        preselectResult = hits[0];
-        if (preselectResult != null) {
-            for (int k = 1; k < hits.length; k++) {
-                if (hits[k] != null) {
-                    preselectResult = preselectResult.deepIntersection(hits[k]);
-                }
-            }
-        } else {
+//        final long start = System.currentTimeMillis();
+//        //The expression can be called multiple times, so we need to
+//        //clear the previous preselectResult
+//        preselectResult = null;
+//        if (maxDistance != null) {
+//            max_distance = ((IntegerValue) maxDistance.eval(contextSequence).convertTo(Type.INTEGER)).getInt();
+//        }
+//        if (minDistance != null) {
+//            min_distance = ((IntegerValue) minDistance.eval(contextSequence).convertTo(Type.INTEGER)).getInt();
+//        }
+//        //Get the search terms
+//        final String arg = searchTerm.eval(contextSequence).getStringValue();
+//        String[] terms;
+//        try {
+//            terms = getSearchTerms(arg);
+//        } catch (final EXistException e) {
+//            throw new XPathException(e.getMessage());
+//        }
+//        //Lookup the terms in the full-text index. returns one node set for each term
+//        final NodeSet[] hits = getMatches(contextSequence.getDocumentSet(),
+//                useContext ? contextSequence.toNodeSet() : null,
+//                NodeSet.DESCENDANT, contextQName, terms);
+//        //Walk through the matches and compute the combined node set
+//        preselectResult = hits[0];
+//        if (preselectResult != null) {
+//            for (int k = 1; k < hits.length; k++) {
+//                if (hits[k] != null) {
+//                    preselectResult = preselectResult.deepIntersection(hits[k]);
+//                }
+//            }
+//        } else {
             preselectResult = NodeSet.EMPTY_SET;
-        }
-        if (terms.length > 1) {
-            boolean hasWildcards = false;
-            for (int i = 0; i < terms.length; i++) {
-                hasWildcards |= NativeTextEngine.containsWildcards(terms[i]);
-            }
-            preselectResult = (NodeSet) (hasWildcards ?
-                patternMatch(context, terms, preselectResult) : 
-                exactMatch(context, terms, preselectResult));
-        }
-        if (context.getProfiler().traceFunctions())
-            {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
-                PerformanceStats.OPTIMIZED_INDEX, System.currentTimeMillis() - start);}
+//        }
+//        if (terms.length > 1) {
+//            boolean hasWildcards = false;
+//            for (int i = 0; i < terms.length; i++) {
+//                hasWildcards |= NativeTextEngine.containsWildcards(terms[i]);
+//            }
+//            preselectResult = (NodeSet) (hasWildcards ?
+//                patternMatch(context, terms, preselectResult) : 
+//                exactMatch(context, terms, preselectResult));
+//        }
+//        if (context.getProfiler().traceFunctions())
+//            {context.getProfiler().traceIndexUsage(context, FTIndex.ID, this,
+//                PerformanceStats.OPTIMIZED_INDEX, System.currentTimeMillis() - start);}
         return preselectResult;
     }
 
     public Sequence evalQuery(String searchArg, NodeSet nodes) throws XPathException {
-        if (maxDistance != null) {
-            max_distance = ((IntegerValue) maxDistance.eval(nodes).convertTo(Type.INTEGER)).getInt();
-        }
-        if (minDistance != null) {
-            min_distance = ((IntegerValue) minDistance.eval(nodes).convertTo(Type.INTEGER)).getInt();
-        }
-        String[] terms;
-        try {
-            terms = getSearchTerms(searchArg);
-        } catch (final EXistException e) {
-            throw new XPathException(e.getMessage());
-        }
-        final NodeSet hits = processQuery(terms, nodes);
-        if (hits == null)
-            {return Sequence.EMPTY_SEQUENCE;}
-        if (terms.length == 1)
-            {return hits;}
-        boolean hasWildcards = false;
-        for (int i = 0; i < terms.length; i++) {
-            hasWildcards |= NativeTextEngine.containsWildcards(terms[i]);
-        }
-        return hasWildcards ? patternMatch(context, terms, hits) : exactMatch(context, terms, hits);
+        
+        throw new XPathException(this, "deprecated, because old FT removed");
+        
+//        if (maxDistance != null) {
+//            max_distance = ((IntegerValue) maxDistance.eval(nodes).convertTo(Type.INTEGER)).getInt();
+//        }
+//        if (minDistance != null) {
+//            min_distance = ((IntegerValue) minDistance.eval(nodes).convertTo(Type.INTEGER)).getInt();
+//        }
+//        String[] terms;
+//        try {
+//            terms = getSearchTerms(searchArg);
+//        } catch (final EXistException e) {
+//            throw new XPathException(e.getMessage());
+//        }
+//        final NodeSet hits = processQuery(terms, nodes);
+//        if (hits == null)
+//            {return Sequence.EMPTY_SEQUENCE;}
+//        if (terms.length == 1)
+//            {return hits;}
+//        boolean hasWildcards = false;
+//        for (int i = 0; i < terms.length; i++) {
+//            hasWildcards |= NativeTextEngine.containsWildcards(terms[i]);
+//        }
+//        return hasWildcards ? patternMatch(context, terms, hits) : exactMatch(context, terms, hits);
     }
 
-    private Sequence exactMatch(XQueryContext context, String[] terms, NodeSet result) {
-        //Walk through hits and calculate term-distances
-        final NodeSet r = new ExtArrayNodeSet();
-        final Tokenizer tok = context.getBroker().getTextEngine().getTokenizer();
-        String term;
-        for (final NodeProxy current : result) {
-            final String value = current.getNodeValueSeparated();
-            tok.setText(value);
-            int j = 0;
-            if (j < terms.length) {
-                term = terms[j];
-            } else {
-                break;
-            }
-            int current_distance = -1;
-            TextToken token;
-            while ((token = tok.nextToken()) != null) {
-                final String word = token.getText().toLowerCase();
-                if (current_distance > max_distance) {
-                    // reset
-                    j = 0;
-                    term = terms[j];
-                    current_distance = -1;
-                } //That else would cause some words to be ignored in the matching
-                if (word.equalsIgnoreCase(term)) {
-                    final boolean withIn = current_distance >= min_distance;
-                    current_distance = 0;
-                    j++;
-                    if (j == terms.length) {
-                        //All terms found
-                        if (withIn) {
-                            r.add(current);
-                        }
-                        break;
-                    } else {
-                        term = terms[j];
-                    }
-                } else if (j > 0 && word.equalsIgnoreCase(terms[0])) {
-                    //First search term found: start again
-                    j = 1;
-                    term = terms[j];
-                    current_distance = 0;
-                    continue;
-                } // that else MAY cause the distance counts to be off by one
-                // but i'm not sure
-                if (-1 < current_distance) {
-                    ++current_distance;
-                }
-            }
-        }
-        return r;
-    }
-
-    private Sequence patternMatch(XQueryContext context, String[] terms,
-            NodeSet result) throws XPathException {
-        //Generate list of search term patterns
-        final Pattern patterns[] = new Pattern[terms.length];
-        final Matcher matchers[] = new Matcher[terms.length];
-        for (int i = 0; i < patterns.length; i++) {
-            try {
-                patterns[i] = Pattern.compile(GlobToRegex.globToRegexp(terms[i]), 
-                        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-                matchers[i] = patterns[i].matcher("");
-            } catch (final PatternSyntaxException e) {
-                throw new XPathException("Malformed pattern: " + patterns[i]);
-            }
-        }
-        //Walk through hits and calculate term-distances
-        final ExtArrayNodeSet r = new ExtArrayNodeSet(100);
-        final Tokenizer tok = context.getBroker().getTextEngine().getTokenizer();
-        Matcher matcher;
-        TextToken token;
-        for (final NodeProxy current : result) {
-            final String value = current.getNodeValueSeparated();
-            tok.setText(value);
-            int j = 0;
-            if (j < patterns.length) {
-                matcher = matchers[j];
-            } else {
-                break;
-            }
-            int current_distance = -1;
-            while ((token = tok.nextToken()) != null) {
-                final String word = token.getText().toLowerCase();
-                if (current_distance > max_distance) {
-                    //Reset
-                    j = 0;
-                    matcher = matchers[j];
-                    current_distance = -1;
-                }
-                matcher.reset(word);
-                matchers[0].reset(word);
-                if (matcher.matches()) {
-                    final boolean withIn = current_distance >= min_distance ? true : false;
-                    current_distance = 0;
-                    j++;
-                    if (j == patterns.length) {
-                        //All terms found
-                        if (withIn) {
-                            r.add(current);
-                        }
-                        break;
-                    } else {
-                        matcher = matchers[j];
-                    }
-                } else if (j > 0 && matchers[0].matches()) {
-                    //First search term found: start again
-                    j = 1;
-                    matcher = matchers[j];
-                    current_distance = 0;
-                    continue;
-                }
-                if (-1 < current_distance) {
-                    ++current_distance;
-                }
-            }
-        }
-        return r;
-    }
+//    private Sequence exactMatch(XQueryContext context, String[] terms, NodeSet result) {
+//        //Walk through hits and calculate term-distances
+//        final NodeSet r = new ExtArrayNodeSet();
+//        final Tokenizer tok = context.getBroker().getTextEngine().getTokenizer();
+//        String term;
+//        for (final NodeProxy current : result) {
+//            final String value = current.getNodeValueSeparated();
+//            tok.setText(value);
+//            int j = 0;
+//            if (j < terms.length) {
+//                term = terms[j];
+//            } else {
+//                break;
+//            }
+//            int current_distance = -1;
+//            TextToken token;
+//            while ((token = tok.nextToken()) != null) {
+//                final String word = token.getText().toLowerCase();
+//                if (current_distance > max_distance) {
+//                    // reset
+//                    j = 0;
+//                    term = terms[j];
+//                    current_distance = -1;
+//                } //That else would cause some words to be ignored in the matching
+//                if (word.equalsIgnoreCase(term)) {
+//                    final boolean withIn = current_distance >= min_distance;
+//                    current_distance = 0;
+//                    j++;
+//                    if (j == terms.length) {
+//                        //All terms found
+//                        if (withIn) {
+//                            r.add(current);
+//                        }
+//                        break;
+//                    } else {
+//                        term = terms[j];
+//                    }
+//                } else if (j > 0 && word.equalsIgnoreCase(terms[0])) {
+//                    //First search term found: start again
+//                    j = 1;
+//                    term = terms[j];
+//                    current_distance = 0;
+//                    continue;
+//                } // that else MAY cause the distance counts to be off by one
+//                // but i'm not sure
+//                if (-1 < current_distance) {
+//                    ++current_distance;
+//                }
+//            }
+//        }
+//        return r;
+//    }
+//
+//    private Sequence patternMatch(XQueryContext context, String[] terms,
+//            NodeSet result) throws XPathException {
+//        //Generate list of search term patterns
+//        final Pattern patterns[] = new Pattern[terms.length];
+//        final Matcher matchers[] = new Matcher[terms.length];
+//        for (int i = 0; i < patterns.length; i++) {
+//            try {
+//                patterns[i] = Pattern.compile(GlobToRegex.globToRegexp(terms[i]), 
+//                        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+//                matchers[i] = patterns[i].matcher("");
+//            } catch (final PatternSyntaxException e) {
+//                throw new XPathException("Malformed pattern: " + patterns[i]);
+//            }
+//        }
+//        //Walk through hits and calculate term-distances
+//        final ExtArrayNodeSet r = new ExtArrayNodeSet(100);
+//        final Tokenizer tok = context.getBroker().getTextEngine().getTokenizer();
+//        Matcher matcher;
+//        TextToken token;
+//        for (final NodeProxy current : result) {
+//            final String value = current.getNodeValueSeparated();
+//            tok.setText(value);
+//            int j = 0;
+//            if (j < patterns.length) {
+//                matcher = matchers[j];
+//            } else {
+//                break;
+//            }
+//            int current_distance = -1;
+//            while ((token = tok.nextToken()) != null) {
+//                final String word = token.getText().toLowerCase();
+//                if (current_distance > max_distance) {
+//                    //Reset
+//                    j = 0;
+//                    matcher = matchers[j];
+//                    current_distance = -1;
+//                }
+//                matcher.reset(word);
+//                matchers[0].reset(word);
+//                if (matcher.matches()) {
+//                    final boolean withIn = current_distance >= min_distance ? true : false;
+//                    current_distance = 0;
+//                    j++;
+//                    if (j == patterns.length) {
+//                        //All terms found
+//                        if (withIn) {
+//                            r.add(current);
+//                        }
+//                        break;
+//                    } else {
+//                        matcher = matchers[j];
+//                    }
+//                } else if (j > 0 && matchers[0].matches()) {
+//                    //First search term found: start again
+//                    j = 1;
+//                    matcher = matchers[j];
+//                    current_distance = 0;
+//                    continue;
+//                }
+//                if (-1 < current_distance) {
+//                    ++current_distance;
+//                }
+//            }
+//        }
+//        return r;
+//    }
 
     /*
      * (non-Javadoc)
